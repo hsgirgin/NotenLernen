@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#1a1814"/>
+  <line x1="50" y1="188" x2="462" y2="188" stroke="#3a3530" stroke-width="7"/>
+  <line x1="50" y1="228" x2="462" y2="228" stroke="#3a3530" stroke-width="7"/>
+  <line x1="50" y1="268" x2="462" y2="268" stroke="#3a3530" stroke-width="7"/>
+  <line x1="50" y1="308" x2="462" y2="308" stroke="#3a3530" stroke-width="7"/>
+  <line x1="50" y1="348" x2="462" y2="348" stroke="#3a3530" stroke-width="7"/>
+  <text x="55" y="360" font-size="240" fill="#d4a843" font-family="serif">𝄞</text>
+  <ellipse cx="370" cy="248" rx="36" ry="26" fill="#d4a843" transform="rotate(-15,370,248)"/>
+  <line x1="404" y1="248" x2="404" y2="128" stroke="#d4a843" stroke-width="8"/>
+</svg>

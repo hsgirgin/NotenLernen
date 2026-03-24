@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NotenLernen – Musik für Schüler</title>
+<script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'Bravura';
+    src: url('https://cdn.jsdelivr.net/npm/bravura@1.3.9/redist/woff/Bravura.woff2') format('woff2'),
+         url('https://cdn.jsdelivr.net/npm/bravura@1.3.9/redist/woff/Bravura.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+  }
+</style>
+<style>
+  :root {
+    --bg: #0f0e0b;
+    --paper: #1a1814;
+    --cream: #f5f0e8;
+    --gold: #d4a843;
+    --gold-light: #f0c96a;
+    --red: #c0392b;
+    --green: #27ae60;
+    --muted: #7a7060;
+    --line: #2e2a22;
+    --staff-line: #3a3530;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'Crimson Pro', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* === HEADER === */
+  header {
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 80%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .app-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .app-subtitle {
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 0.4rem;
+  }
+
+  /* === NAV TABS === */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem 1rem 0;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .tab:hover { color: var(--cream); border-color: var(--gold); }
+  .tab.active {
+    background: var(--gold);
+    color: var(--bg);
+    border-color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* === MAIN === */
+  main { padding: 2rem 1rem 4rem; max-width: 900px; margin: 0 auto; }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* === STAFF COMPONENT === */
+  .staff-wrap {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  .staff-label {
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .staff-svg { width: 100%; display: block; }
+
+  /* === QUIZ SECTION === */
+  .quiz-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .quiz-question {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    color: var(--cream);
+    margin-bottom: 0.5rem;
+  }
+
+  .quiz-hint {
+    font-size: 0.9rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 2rem;
+  }
+
+  .staff-mini { margin: 1.5rem auto; max-width: 400px; }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    max-width: 480px;
+    margin: 1.5rem auto 0;
+  }
+  .options-grid.piano-mode {
+    display: block;
+    max-width: 100%;
+    margin: 1rem 0 0;
+  }
+  .quiz-piano-wrap { position: relative; height: 120px; width: 100%; }
+  .qp-white {
+    position: absolute; bottom: 0;
+    background: #f0ece0; border: 1px solid #999; border-top: none;
+    border-radius: 0 0 4px 4px; cursor: pointer;
+    transition: background 0.1s; box-sizing: border-box;
+  }
+  .qp-white:hover { background: #f0c96a; }
+  .qp-white.correct { background: #27ae60 !important; }
+  .qp-white.wrong   { background: #c0392b !important; }
+  .qp-white .qp-label {
+    position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+    font-size: 0.58rem; font-weight: 600; color: #555; pointer-events: none; white-space: nowrap;
+  }
+  .qp-white.correct .qp-label, .qp-white.wrong .qp-label { color: #fff; }
+  .qp-black {
+    position: absolute; top: 0; z-index: 2;
+    background: #222; border-radius: 0 0 3px 3px; cursor: pointer;
+    transition: background 0.1s; box-sizing: border-box;
+  }
+  .qp-black:hover { background: #d4a843; }
+  .qp-black.correct { background: #27ae60 !important; }
+  .qp-black.wrong   { background: #c0392b !important; }
+  .qp-black .qp-label {
+    position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    font-size: 0.5rem; font-weight: 600; color: #ccc; pointer-events: none; white-space: nowrap;
+  }
+  .qp-black.correct .qp-label { color: #fff; }
+
+  @media (max-width: 400px) { .options-grid { grid-template-columns: 1fr; } }
+
+  .option-btn {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--cream);
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    padding: 0.9rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--gold);
+    color: var(--gold);
+    transform: translateY(-1px);
+  }
+
+  .option-btn.correct { background: #1a3a25; border-color: var(--green); color: var(--green); }
+  .option-btn.wrong   { background: #3a1a1a; border-color: var(--red);   color: var(--red); }
+
+  .feedback-msg {
+    margin-top: 1.2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    min-height: 1.5rem;
+    transition: opacity 0.3s;
+  }
+
+  .feedback-msg.good { color: var(--green); }
+  .feedback-msg.bad  { color: var(--red); }
+
+  .quiz-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.65rem 2rem;
+    cursor: pointer;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    transition: background 0.2s;
+  }
+
+  .btn-primary:hover { background: var(--gold-light); }
+  .btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+  .score-display {
+    font-size: 1rem;
+    color: var(--muted);
+  }
+
+  .score-display span { color: var(--gold); font-weight: 600; }
+  .quiz-mode-btn {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    font-family: 'Crimson Pro', serif; font-size: 0.95rem;
+    padding: 0.45rem 1.1rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+  }
+  .quiz-mode-btn:hover { color: var(--cream); border-color: var(--gold); }
+  .quiz-mode-btn.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 600; }
+  .klavier-level-btn {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    font-family: 'Crimson Pro', serif; font-size: 0.85rem;
+    padding: 0.3rem 0.9rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+  }
+  .klavier-level-btn:hover { color: var(--cream); border-color: var(--gold); }
+  .klavier-level-btn.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 600; }
+
+  /* === REFERENCE TABLE === */
+  .ref-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1rem;
+  }
+
+  .note-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1rem 0.75rem;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .note-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+
+  .note-card .note-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .note-card .note-german {
+    font-size: 0.95rem;
+    color: var(--cream);
+    margin: 0.3rem 0 0.2rem;
+    font-weight: 600;
+  }
+
+  .note-card .note-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* === PIANO === */
+  .piano-wrap {
+    overflow-x: auto;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .piano {
+    position: relative;
+    height: 140px;
+    min-width: 480px;
+    margin: 0 auto;
+    max-width: 640px;
+  }
+
+  .white-key {
+    position: absolute;
+    bottom: 0;
+    background: #f0ece0;
+    border: 1px solid #bbb;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    cursor: pointer;
+    transition: background 0.1s;
+    box-sizing: border-box;
+  }
+
+  .white-key:hover, .white-key.active { background: var(--gold-light); }
+
+  .white-key .key-label {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #555;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .black-key-piano {
+    position: absolute;
+    top: 0;
+    background: #222;
+    border-radius: 0 0 3px 3px;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 0.1s;
+    box-sizing: border-box;
+  }
+  .black-key-piano:hover, .black-key-piano.active { background: var(--gold); }
+  .black-key-piano .key-label {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.55rem;
+    font-weight: 600;
+    color: #ccc;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .black-key-piano.active .key-label { color: var(--bg); }
+
+  .black-keys {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 85px;
+    pointer-events: none;
+  }
+
+  /* Section titles */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.3rem, 4vw, 1.9rem);
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+  }
+
+  .section-desc {
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 2rem 0;
+  }
+
+  /* Progress bar */
+  .progress-bar-wrap {
+    background: var(--line);
+    border-radius: 2px;
+    height: 4px;
+    margin: 1rem 0 1.5rem;
+    overflow: hidden;
+  }
+
+  .progress-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* Notenwert section */
+  .values-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+
+  .value-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1.2rem 1rem;
+    text-align: center;
+  }
+
+  .value-symbol {
+    font-size: 2.8rem;
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+  }
+
+  .value-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    color: var(--gold);
+  }
+
+  .value-beats {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 0.2rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="app-title">♩ NotenLernen</div>
+  <div class="app-subtitle">Musiknoten verstehen — für Schülerinnen und Schüler</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showSection('lernbereich')">📖 Lernen</button>
+  <button class="tab" onclick="showSection('quiz')">🎯 Quiz</button>
+  <button class="tab" onclick="showSection('notenwerte')">🎵 Notenwerte</button>
+  <button class="tab" onclick="showSection('klavier')">🎹 Klavier</button>
+</div>
+
+<main>
+
+  <!-- ===== LERNBEREICH ===== -->
+  <section class="section active" id="lernbereich">
+    <h2 class="section-title">Das Notensystem</h2>
+    <p class="section-desc">Die fünf Linien des Notensystems mit den zugehörigen Notennamen.</p>
+
+    <div class="staff-wrap">
+      <div class="staff-label">Violinschlüssel (G-Schlüssel)</div>
+      <svg class="staff-svg" viewBox="0 0 760 158" xmlns="http://www.w3.org/2000/svg">
+        <!-- 5 Linien -->
+        <line x1="60" y1="40"  x2="740" y2="40"  stroke="#3a3530" stroke-width="1.5"/>
+        <line x1="60" y1="60"  x2="740" y2="60"  stroke="#3a3530" stroke-width="1.5"/>
+        <line x1="60" y1="80"  x2="740" y2="80"  stroke="#3a3530" stroke-width="1.5"/>
+        <line x1="60" y1="100" x2="740" y2="100" stroke="#3a3530" stroke-width="1.5"/>
+        <line x1="60" y1="120" x2="740" y2="120" stroke="#3a3530" stroke-width="1.5"/>
+
+        <!-- Violinschlüssel -->
+        <text x="65" y="122" font-size="88" fill="#d4a843" font-family="Bravura, serif">𝄞</text>
+
+        <!-- C4 - Hilfslinie -->
+        <line x1="143" y1="130" x2="177" y2="130" stroke="#d4a843" stroke-width="1.5"/>
+        <ellipse cx="160" cy="130" rx="11" ry="7.5" fill="#d4a843" transform="rotate(-15,160,130)"/>
+        <text x="160" y="150" text-anchor="middle" font-size="13" fill="#f5f0e8" font-family="Crimson Pro, serif">C</text>
+
+        <!-- D4 - unter 1. Linie -->
+        <ellipse cx="238" cy="125" rx="11" ry="7.5" fill="#d4a843" transform="rotate(-15,238,125)"/>
+        <text x="238" y="150" text-anchor="middle" font-size="13" fill="#f5f0e8" font-family="Crimson Pro, serif">D</text>
+
+        <!-- E4 - 1. Linie -->
+        <ellipse cx="316" cy="120" rx="11" ry="7.5" fill="#d4a843" transform="rotate(-15,316,120)"/>
+        <text x="316" y="150" text-anchor="middle" font-size="13" fill="#f5f0e8" font-family="Crimson Pro, serif">E</text>
+
+        <!-- F4 - 1. Zwischenraum -->
+        <ellipse cx="394" cy="110" rx="11" ry="7.5" fill="#d4a843" transform="rotate(-15,394,110)"/>
+        <text x="394" y="150" text-anchor="middle" font-size="13" fill="#f5f0e8" font-family="Crimson Pro, serif">F</text>
+
+        <!-- G4 - 2. Linie -->
+        <ellipse cx="472" cy="100" rx="11" ry="7.5" fill="#d4a843" transform="rotate(-15,472,100)"/>
+        <text x="472" y="150" text-anchor="middle" font-size="13" fill="#f5f0e8" font-family="Crimson Pro, serif">G</text>
+
+        <!-- A4 - 2. Zwischenraum -->
+        <ellipse cx="550" cy="90" rx="11" ry="7.5" fill="#d4a843" transform="rotate(-15,550,90)"/>
+        <text x="550" y="150" text-anchor="middle" font-size="13" fill="#f5f0e8" font-family="Crimson Pro, serif">A</text>
+
+        <!-- H4 - 3. Linie -->
+        <ellipse cx="628" cy="80" rx="11" ry="7.5" fill="#d4a843" transform="rotate(-15,628,80)"/>
+        <text x="628" y="150" text-anchor="middle" font-size="13" fill="#f5f0e8" font-family="Crimson Pro, serif">H</text>
+
+        <!-- C5 - 3. Zwischenraum -->
+        <ellipse cx="706" cy="70" rx="11" ry="7.5" fill="#d4a843" transform="rotate(-15,706,70)"/>
+        <text x="706" y="150" text-anchor="middle" font-size="13" fill="#f5f0e8" font-family="Crimson Pro, serif">C</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ===== QUIZ ===== -->
+  <section class="section" id="quiz">
+    <h2 class="section-title">Quiz</h2>
+    <p class="section-desc">Wähle einen Modus und teste dein Wissen.</p>
+    <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+      <button class="quiz-mode-btn active" onclick="setQuizMode('noten',this)">🎵 Noten</button>
+      <button class="quiz-mode-btn" onclick="setQuizMode('notenwerte',this)">♪ Notenwerte</button>
+      <button class="quiz-mode-btn" onclick="setQuizMode('klavier',this)">🎹 Klaviertasten</button>
+    </div>
+    <div id="noten-level-selector" style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;">
+      <span style="color:var(--muted);font-size:0.85rem;">Schwierigkeit:</span>
+      <button class="klavier-level-btn active" onclick="setNotenLevel('leicht',this)">Leicht</button>
+      <button class="klavier-level-btn" onclick="setNotenLevel('schwer',this)">Schwer (Vorzeichen)</button>
+    </div>
+    <div id="klavier-level-selector" style="display:none;gap:0.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;">
+      <span style="color:var(--muted);font-size:0.85rem;">Schwierigkeit:</span>
+      <button class="klavier-level-btn active" onclick="setKlavierLevel('leicht',this)">Leicht (weiße Tasten)</button>
+      <button class="klavier-level-btn" onclick="setKlavierLevel('schwer',this)">Schwer (alle Tasten)</button>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-inner" id="quiz-progress" style="width:0%"></div>
+    </div>
+
+    <div class="quiz-card">
+      <div class="quiz-question" id="quiz-q">Welche Note ist das?</div>
+      <div class="quiz-hint" id="quiz-hint">Violinschlüssel</div>
+
+      <div class="staff-mini" id="quiz-staff-wrap">
+        <svg id="quiz-staff" viewBox="0 0 400 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+          <line x1="30" y1="30"  x2="370" y2="30"  stroke="#3a3530" stroke-width="1.5"/>
+          <line x1="30" y1="50"  x2="370" y2="50"  stroke="#3a3530" stroke-width="1.5"/>
+          <line x1="30" y1="70"  x2="370" y2="70"  stroke="#3a3530" stroke-width="1.5"/>
+          <line x1="30" y1="90"  x2="370" y2="90"  stroke="#3a3530" stroke-width="1.5"/>
+          <line x1="30" y1="110" x2="370" y2="110" stroke="#3a3530" stroke-width="1.5"/>
+          <text x="32" y="113" font-size="72" fill="#d4a843" font-family="Bravura, serif">𝄞</text>
+          <g id="quiz-note"></g>
+        </svg>
+      </div>
+
+      <div id="quiz-symbol-wrap" style="display:none;font-size:4.5rem;padding:1rem 0;text-align:center;color:var(--gold);"><span id="quiz-symbol"></span></div>
+      <div class="options-grid" id="options-grid"></div>
+      <div class="feedback-msg" id="feedback"></div>
+
+      <div class="quiz-controls">
+        <div class="score-display">Richtig: <span id="correct-count">0</span> / <span id="total-count">0</span></div>
+        <button class="btn-primary" id="next-btn" onclick="nextQuestion()" disabled>Weiter →</button>
+        <button class="btn-primary" onclick="resetQuiz()" style="background:var(--line);color:var(--cream);">Neustart</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== NOTENWERTE ===== -->
+  <section class="section" id="notenwerte">
+    <h2 class="section-title">Notenwerte</h2>
+    <p class="section-desc">Jede Note hat einen Wert — er sagt dir, wie lange du sie spielst oder singst.</p>
+
+    <div class="values-grid">
+      <div class="value-card">
+        <div class="value-symbol">𝅝</div>
+        <div class="value-name">Ganze Note</div>
+        <div class="value-beats">4 Schläge</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">𝅗𝅥</div>
+        <div class="value-name">Halbe Note</div>
+        <div class="value-beats">2 Schläge</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">♩</div>
+        <div class="value-name">Viertelnote</div>
+        <div class="value-beats">1 Schlag</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">♪</div>
+        <div class="value-name">Achtelnote</div>
+        <div class="value-beats">½ Schlag</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">𝅘𝅥𝅯</div>
+        <div class="value-name">Sechzehntelnote</div>
+        <div class="value-beats">¼ Schlag</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">𝄻</div>
+        <div class="value-name">Ganze Pause</div>
+        <div class="value-beats">4 Schläge Stille</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">𝄼</div>
+        <div class="value-name">Halbe Pause</div>
+        <div class="value-beats">2 Schläge Stille</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">𝄽</div>
+        <div class="value-name">Viertelpause</div>
+        <div class="value-beats">1 Schlag Stille</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h3 class="section-title" style="font-size:1.3rem;margin-bottom:0.5rem">Vorzeichen</h3>
+    <p class="section-desc">Vorzeichen verändern die Tonhöhe einer Note.</p>
+    <div class="values-grid">
+      <div class="value-card">
+        <div class="value-symbol">♯</div>
+        <div class="value-name">Kreuz (Erhöhung)</div>
+        <div class="value-beats">Ton um einen Halbton erhöht</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">♭</div>
+        <div class="value-name">B (Erniedrigung)</div>
+        <div class="value-beats">Ton um einen Halbton gesenkt</div>
+      </div>
+      <div class="value-card">
+        <div class="value-symbol">♮</div>
+        <div class="value-name">Auflösungszeichen</div>
+        <div class="value-beats">Hebt Vorzeichen auf</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== KLAVIER ===== -->
+  <section class="section" id="klavier">
+    <h2 class="section-title">Klaviatur</h2>
+    <p class="section-desc">Tippe auf eine Taste, um die Note zu sehen. So erkennst du, wie Noten und Tasten zusammenhängen.</p>
+
+    <div class="piano-wrap">
+      <div class="piano" id="piano"></div>
+    </div>
+
+    <div class="staff-wrap" id="piano-staff-wrap" style="display:none;">
+      <div class="staff-label" id="piano-staff-label">Note auf dem Notensystem</div>
+      <svg id="piano-staff-svg" viewBox="0 0 400 135" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:400px;display:block;margin:0 auto;">
+        <line x1="30" y1="30"  x2="370" y2="30"  stroke="#3a3530" stroke-width="1.5"/>
+        <line x1="30" y1="50"  x2="370" y2="50"  stroke="#3a3530" stroke-width="1.5"/>
+        <line x1="30" y1="70"  x2="370" y2="70"  stroke="#3a3530" stroke-width="1.5"/>
+        <line x1="30" y1="90"  x2="370" y2="90"  stroke="#3a3530" stroke-width="1.5"/>
+        <line x1="30" y1="110" x2="370" y2="110" stroke="#3a3530" stroke-width="1.5"/>
+        <text x="32" y="113" font-size="72" fill="#d4a843" font-family="Bravura, serif">𝄞</text>
+        <g id="piano-note"></g>
+      </svg>
+    </div>
+  </section>
+</main>
+
+<script>
+// =================== DATA ===================
+const NOTES = [
+  { name: 'C4',  label: 'C',  staffY: 123, ledger: true,  ledgerY: 123 },
+  { name: 'D4',  label: 'D',  staffY: 113, ledger: false },
+  { name: 'E4',  label: 'E',  staffY: 110, ledger: false },
+  { name: 'F4',  label: 'F',  staffY: 100, ledger: false },
+  { name: 'G4',  label: 'G',  staffY: 90,  ledger: false },
+  { name: 'A4',  label: 'A',  staffY: 80,  ledger: false },
+  { name: 'H4',  label: 'H',  staffY: 70,  ledger: false },
+  { name: 'C5',  label: 'C',  staffY: 60,  ledger: false },
+  { name: 'D5',  label: 'D',  staffY: 50,  ledger: false },
+  { name: 'E5',  label: 'E',  staffY: 40,  ledger: false },
+  { name: 'F5',  label: 'F',  staffY: 30,  ledger: false },
+];
+
+// Staff Y positions for quiz SVG (viewBox 0 0 400 130, lines at 30,50,70,90,110)
+const QUIZ_NOTES = [
+  { label: 'C',  y: 120, ledger: true,  hint: 'Hilfsline unten (C4)' },
+  { label: 'D',  y: 119, ledger: false, hint: 'Unterhalb der 1. Linie (D4)' },
+  { label: 'E',  y: 110, ledger: false, hint: '1. Linie von unten (E4)' },
+  { label: 'F',  y: 100, ledger: false, hint: '1. Zwischenraum (F4)' },
+  { label: 'G',  y: 90,  ledger: false, hint: '2. Linie von unten (G4)' },
+  { label: 'A',  y: 80,  ledger: false, hint: '2. Zwischenraum (A4)' },
+  { label: 'H',  y: 70,  ledger: false, hint: '3. Linie (Mitte) (H4)' },
+  { label: 'C',  y: 60,  ledger: false, hint: '3. Zwischenraum (C5)' },
+  { label: 'D',  y: 50,  ledger: false, hint: '4. Linie (D5)' },
+  { label: 'E',  y: 40,  ledger: false, hint: '4. Zwischenraum (E5)' },
+  { label: 'F',  y: 30,  ledger: false, hint: '5. Linie oben (F5)' },
+];
+
+// Hard: each note gets ♯ and ♭ variant at same position
+const QUIZ_NOTES_HARD = [
+  { label: 'Cis',  acc: '♯', y: 120, ledger: true  },
+  { label: 'Ces',  acc: '♭', y: 120, ledger: true  },
+  { label: 'Dis',  acc: '♯', y: 115, ledger: false },
+  { label: 'Des',  acc: '♭', y: 115, ledger: false },
+  { label: 'Eis',  acc: '♯', y: 110, ledger: false },
+  { label: 'Es',   acc: '♭', y: 110, ledger: false },
+  { label: 'Fis',  acc: '♯', y: 100, ledger: false },
+  { label: 'Fes',  acc: '♭', y: 100, ledger: false },
+  { label: 'Gis',  acc: '♯', y: 90,  ledger: false },
+  { label: 'Ges',  acc: '♭', y: 90,  ledger: false },
+  { label: 'Ais',  acc: '♯', y: 80,  ledger: false },
+  { label: 'As',   acc: '♭', y: 80,  ledger: false },
+  { label: 'His',  acc: '♯', y: 70,  ledger: false },
+  { label: 'B',    acc: '♭', y: 70,  ledger: false },
+  { label: 'Cis',  acc: '♯', y: 60,  ledger: false },
+  { label: 'Ces',  acc: '♭', y: 60,  ledger: false },
+  { label: 'Dis',  acc: '♯', y: 50,  ledger: false },
+  { label: 'Des',  acc: '♭', y: 50,  ledger: false },
+  { label: 'Eis',  acc: '♯', y: 40,  ledger: false },
+  { label: 'Es',   acc: '♭', y: 40,  ledger: false },
+  { label: 'Fis',  acc: '♯', y: 30,  ledger: false },
+  { label: 'Fes',  acc: '♭', y: 30,  ledger: false },
+];
+let notenLevel = 'leicht';
+
+
+// =================== TABS ===================
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// =================== QUIZ ===================
+let current = null, answered = false, correct = 0, total = 0, questionIndex = 0;
+let quizMode = 'noten';
+let lastQuestions = []; // track last 3 to avoid repeats
+
+const NOTENWERTE_QUIZ = [
+  { type: 'quarter',  name: 'Viertelnote',     beats: '1 Schlag' },
+  { type: 'eighth',   name: 'Achtelnote',       beats: '½ Schlag' },
+  { type: 'half',     name: 'Halbe Note',       beats: '2 Schläge' },
+  { type: 'wholeRest',   symbol: '𝄻', name: 'Ganze Pause',    beats: '4 Schläge Stille' },
+  { type: 'halfRest',    symbol: '𝄼',  name: 'Halbe Pause',    beats: '2 Schläge Stille' },
+  { type: 'quarterRest', symbol: '𝄽',name: 'Viertelpause', beats: '1 Schlag Stille' },
+];
+
+const KLAVIER_EASY = [
+  { label: 'C', matches: ['C4','C5'] },
+  { label: 'D', matches: ['D4','D5'] },
+  { label: 'E', matches: ['E4','E5'] },
+  { label: 'F', matches: ['F4','F5'] },
+  { label: 'G', matches: ['G4','G5'] },
+  { label: 'A', matches: ['A4'] },
+  { label: 'H', matches: ['H4'] },
+];
+const KLAVIER_HARD = [
+  ...KLAVIER_EASY,
+  { label: 'Cis (C♯)', matches: ['Cis4','Cis5'] },
+  { label: 'Des (D♭)', matches: ['Cis4','Cis5'] },
+  { label: 'Dis (D♯)', matches: ['Dis4','Dis5'] },
+  { label: 'Es (E♭)', matches: ['Dis4','Dis5'] },
+  { label: 'Fis (F♯)', matches: ['Fis4','Fis5'] },
+  { label: 'Ges (G♭)', matches: ['Fis4','Fis5'] },
+  { label: 'Gis (G♯)', matches: ['Gis4','Gis5'] },
+  { label: 'As (A♭)', matches: ['Gis4','Gis5'] },
+  { label: 'Ais (A♯)', matches: ['Ais4'] },
+  { label: 'B (B♭)', matches: ['Ais4'] },
+];
+let klavierLevel = 'leicht';
+
+function setQuizMode(mode, btn) {
+  quizMode = mode;
+  document.querySelectorAll('.quiz-mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const ksel = document.getElementById('klavier-level-selector');
+  if (ksel) ksel.style.display = mode === 'klavier' ? 'flex' : 'none';
+  const nsel = document.getElementById('noten-level-selector');
+  if (nsel) nsel.style.display = mode === 'noten' ? 'flex' : 'none';
+  resetQuiz();
+}
+function setKlavierLevel(level, btn) {
+  klavierLevel = level;
+  document.querySelectorAll('#klavier-level-selector .klavier-level-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  resetQuiz();
+}
+function setNotenLevel(level, btn) {
+  notenLevel = level;
+  document.querySelectorAll('#noten-level-selector .klavier-level-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  resetQuiz();
+}
+function showSymbol(sym) {
+  showSymbolLarge(sym);
+}
+function showStaff() {
+  document.getElementById('quiz-symbol-wrap').style.display = 'none';
+  document.getElementById('quiz-staff-wrap').style.display = 'block';
+}
+function showSymbolLarge(sym) {
+  document.getElementById('quiz-staff-wrap').style.display = 'none';
+  const wrap = document.getElementById('quiz-symbol-wrap');
+  wrap.style.display = 'block'; wrap.style.fontSize = '4.5rem';
+  document.getElementById('quiz-symbol').innerHTML = '';
+  document.getElementById('quiz-symbol').textContent = sym;
+}
+function showNotevalueStaff(noteval) {
+  document.getElementById('quiz-staff-wrap').style.display = 'none';
+  const wrap = document.getElementById('quiz-symbol-wrap');
+  wrap.style.display = 'block'; wrap.style.fontSize = '';
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 400 130');
+  svg.setAttribute('style','width:100%;display:block;');
+  // Staff lines
+  [30,50,70,90,110].forEach(y => {
+    const l = document.createElementNS(ns,'line');
+    l.setAttribute('x1','20'); l.setAttribute('x2','380');
+    l.setAttribute('y1',y); l.setAttribute('y2',y);
+    l.setAttribute('stroke','#3a3530'); l.setAttribute('stroke-width','1.5');
+    svg.appendChild(l);
+  });
+
+  function noteHead(x, y) {
+    const e = document.createElementNS(ns,'ellipse');
+    e.setAttribute('cx',x); e.setAttribute('cy',y);
+    e.setAttribute('rx','13'); e.setAttribute('ry','9');
+    e.setAttribute('fill','#d4a843');
+    e.setAttribute('transform',`rotate(-15,${x},${y})`);
+    svg.appendChild(e);
+  }
+  function stem(x, y, up=true) {
+    const l = document.createElementNS(ns,'line');
+    l.setAttribute('x1',x+12); l.setAttribute('x2',x+12);
+    l.setAttribute('y1',y); l.setAttribute('y2', up ? y-45 : y+45);
+    l.setAttribute('stroke','#d4a843'); l.setAttribute('stroke-width','2');
+    svg.appendChild(l);
+  }
+  function flag(x, y, up=true) {
+    const p = document.createElementNS(ns,'path');
+    const tx = x+12, ty = up ? y-45 : y+45;
+    const d = up
+      ? `M${tx},${ty} C${tx+22},${ty+10} ${tx+24},${ty+22} ${tx+10},${ty+32}`
+      : `M${tx},${ty} C${tx+22},${ty-10} ${tx+24},${ty-22} ${tx+10},${ty-32}`;
+    p.setAttribute('d',d); p.setAttribute('fill','none');
+    p.setAttribute('stroke','#d4a843'); p.setAttribute('stroke-width','2.5');
+    p.setAttribute('stroke-linecap','round');
+    svg.appendChild(p);
+  }
+  function beam(x1,y1,x2,y2) {
+    const l = document.createElementNS(ns,'line');
+    l.setAttribute('x1',x1+12); l.setAttribute('x2',x2+12);
+    l.setAttribute('y1',y1-45); l.setAttribute('y2',y2-45);
+    l.setAttribute('stroke','#d4a843'); l.setAttribute('stroke-width','5');
+    l.setAttribute('stroke-linecap','square');
+    svg.appendChild(l);
+  }
+
+  const cx = 200, ny = 90; // note sits on 2nd line
+
+  if (noteval.type === 'quarter') {
+    noteHead(cx, ny); stem(cx, ny);
+  } else if (noteval.type === 'eighth') {
+    noteHead(cx, ny); stem(cx, ny); flag(cx, ny);
+  } else if (noteval.type === 'half') {
+    // Open (hollow) note head
+    const e = document.createElementNS(ns,'ellipse');
+    e.setAttribute('cx','200'); e.setAttribute('cy',ny);
+    e.setAttribute('rx','13'); e.setAttribute('ry','9');
+    e.setAttribute('fill','none');
+    e.setAttribute('stroke','#d4a843'); e.setAttribute('stroke-width','2.5');
+    e.setAttribute('transform',`rotate(-15,200,${ny})`);
+    svg.appendChild(e);
+    stem(200, ny);
+  } else {
+    // Rests: use text symbol
+    const txt = document.createElementNS(ns,'text');
+    txt.setAttribute('x','200'); txt.setAttribute('y','95');
+    txt.setAttribute('text-anchor','middle');
+    txt.setAttribute('font-size','72');
+    txt.setAttribute('fill','#d4a843');
+    txt.setAttribute('font-family','Bravura, serif');
+    txt.textContent = noteval.symbol;
+    svg.appendChild(txt);
+  }
+
+  const span = document.getElementById('quiz-symbol');
+  span.innerHTML = ''; span.appendChild(svg);
+}
+
+function renderNoteOnStaff(svgId, noteData) {
+  const g = document.getElementById(svgId);
+  g.innerHTML = '';
+  const x = 200, y = noteData.y;
+  if (noteData.label === 'C' && y >= 115) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x-16); line.setAttribute('x2', x+16);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke','#d4a843'); line.setAttribute('stroke-width','1.5');
+    g.appendChild(line);
+  }
+  const el = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+  el.setAttribute('cx', x); el.setAttribute('cy', y);
+  el.setAttribute('rx','13'); el.setAttribute('ry','9');
+  el.setAttribute('fill','#d4a843');
+  el.setAttribute('transform', `rotate(-15, ${x}, ${y})`);
+  g.appendChild(el);
+  const stem = document.createElementNS('http://www.w3.org/2000/svg','line');
+  stem.setAttribute('x1', x+12); stem.setAttribute('x2', x+12);
+  stem.setAttribute('y1', y); stem.setAttribute('y2', y-50);
+  stem.setAttribute('stroke','#d4a843'); stem.setAttribute('stroke-width','2');
+  g.appendChild(stem);
+}
+
+
+function renderNoteOnStaffWithAccidental(svgId, noteData) {
+  const g = document.getElementById(svgId);
+  g.innerHTML = '';
+  const x = 200, y = noteData.y;
+  if (noteData.ledger) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x-16); line.setAttribute('x2',x+16);
+    line.setAttribute('y1',y); line.setAttribute('y2',y);
+    line.setAttribute('stroke','#d4a843'); line.setAttribute('stroke-width','1.5');
+    g.appendChild(line);
+  }
+  const acc = document.createElementNS('http://www.w3.org/2000/svg','text');
+  acc.setAttribute('x', x-22); acc.setAttribute('y', y+6);
+  acc.setAttribute('font-size','20'); acc.setAttribute('fill','#d4a843');
+  acc.setAttribute('text-anchor','middle'); acc.setAttribute('font-family','serif');
+  acc.textContent = noteData.acc;
+  g.appendChild(acc);
+  const el = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+  el.setAttribute('cx',x); el.setAttribute('cy',y);
+  el.setAttribute('rx','13'); el.setAttribute('ry','9');
+  el.setAttribute('fill','#d4a843');
+  el.setAttribute('transform',`rotate(-15,${x},${y})`);
+  g.appendChild(el);
+  const stem = document.createElementNS('http://www.w3.org/2000/svg','line');
+  stem.setAttribute('x1',x+12); stem.setAttribute('x2',x+12);
+  stem.setAttribute('y1',y); stem.setAttribute('y2',y-50);
+  stem.setAttribute('stroke','#d4a843'); stem.setAttribute('stroke-width','2');
+  g.appendChild(stem);
+}
+
+function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+function renderQuizPiano(container) {
+  container.className = 'options-grid piano-mode';
+  // white keys: C D E F G A H C D E F G  (12 keys)
+  const whites = [
+    {short:'C4',label:'C4'},{short:'D4',label:'D4'},{short:'E4',label:'E4'},
+    {short:'F4',label:'F4'},{short:'G4',label:'G4'},{short:'A4',label:'A4'},
+    {short:'H4',label:'H4'},{short:'C5',label:'C5'},{short:'D5',label:'D5'},
+    {short:'E5',label:'E5'},{short:'F5',label:'F5'},{short:'G5',label:'G5'},
+  ];
+  // black keys: position = fraction of total width, between which whites
+  // pattern per octave: C#=0-1, D#=1-2, skip E-F, F#=3-4, G#=4-5, A#=5-6, skip H-C
+  const blacks = [
+    {short:'Cis4',label:'C#4',left:0.5},{short:'Dis4',label:'D#4',left:1.5},
+    {short:'Fis4',label:'F#4',left:3.5},{short:'Gis4',label:'G#4',left:4.5},{short:'Ais4',label:'A#4',left:5.5},
+    {short:'Cis5',label:'C#5',left:7.5},{short:'Dis5',label:'D#5',left:8.5},
+    {short:'Fis5',label:'F#5',left:10.5},{short:'Gis5',label:'G#5',left:11.5},
+  ];
+  const wrap = document.createElement('div');
+  wrap.className = 'quiz-piano-wrap';
+  const nw = whites.length;
+  const wPct = 100 / nw;
+  whites.forEach((k, i) => {
+    const key = document.createElement('div');
+    key.className = 'qp-white';
+    key.dataset.key = k.short;
+    key.style.left = (i * wPct) + '%';
+    key.style.width = wPct + '%';
+    key.style.height = '100%';
+    key.onclick = () => checkPianoAnswer(k.short, key);
+    wrap.appendChild(key);
+  });
+  const bw = wPct * 0.6;
+  blacks.forEach(k => {
+    const key = document.createElement('div');
+    key.className = 'qp-black';
+    key.dataset.key = k.short;
+    key.style.left = (k.left * wPct + wPct * 0.2) + '%';
+    key.style.width = bw + '%';
+    key.style.height = '62%';
+    key.onclick = () => checkPianoAnswer(k.short, key);
+    wrap.appendChild(key);
+  });
+  container.appendChild(wrap);
+}
+
+function checkPianoAnswer(choice, keyEl) {
+  if (answered) return;
+  answered = true; total++;
+  const isCorrect = current.matches.includes(choice);
+  document.querySelectorAll('.qp-white, .qp-black').forEach(k => {
+    k.style.pointerEvents = 'none';
+    if (current.matches.includes(k.dataset.key)) k.classList.add('correct');
+  });
+  if (isCorrect) {
+    correct++;
+    document.getElementById('feedback').textContent = '✓ Richtig! Sehr gut!';
+    document.getElementById('feedback').className = 'feedback-msg good';
+  } else {
+    keyEl.classList.add('wrong');
+    document.getElementById('feedback').textContent = '✗ Falsch — ' + current.label + ' ist markiert.';
+    document.getElementById('feedback').className = 'feedback-msg bad';
+  }
+  document.getElementById('correct-count').textContent = correct;
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('next-btn').disabled = false;
+}
+
+function pickRandom(pool) {
+  if (pool.length <= 1) return pool[0];
+  // Filter out recently shown items (by label/name/type)
+  const key = item => item.label || item.name || item.type || JSON.stringify(item);
+  const avoidKeys = lastQuestions.map(key);
+  const filtered = pool.filter(item => !avoidKeys.includes(key(item)));
+  const candidates = filtered.length > 0 ? filtered : pool;
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+  lastQuestions.push(chosen);
+  if (lastQuestions.length > 3) lastQuestions.shift();
+  return chosen;
+}
+
+function nextQuestion() {
+  answered = false;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback-msg';
+  document.getElementById('next-btn').disabled = true;
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML = '';
+  grid.className = 'options-grid';
+
+  if (quizMode === 'noten') {
+    showStaff();
+    if (notenLevel === 'leicht') {
+      const allNoteLabels = ['C','D','E','F','G','A','H'];
+      current = pickRandom(QUIZ_NOTES);
+      renderNoteOnStaff('quiz-note', current);
+      document.getElementById('quiz-q').textContent = 'Welche Note ist das?';
+      document.getElementById('quiz-hint').textContent = 'Violinschlüssel';
+      const correctLabelE = current.label;
+      const wrongs = shuffle(allNoteLabels.filter(n => n !== correctLabelE)).slice(0,3);
+      shuffle([correctLabelE, ...wrongs]).forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn'; btn.textContent = opt;
+        btn.onclick = () => checkAnswer(opt, btn, correctLabelE);
+        grid.appendChild(btn);
+      });
+    } else {
+      current = pickRandom(QUIZ_NOTES_HARD);
+      renderNoteOnStaffWithAccidental('quiz-note', current);
+      document.getElementById('quiz-q').textContent = 'Welche Note ist das?';
+      document.getElementById('quiz-hint').textContent = 'Violinschlüssel — mit Vorzeichen';
+      const allHardLabels = [...new Set(QUIZ_NOTES_HARD.map(n => n.label))];
+      const correctLabel = current.label;
+      const wrongs = shuffle(allHardLabels.filter(n => n !== correctLabel)).slice(0,3);
+      shuffle([correctLabel, ...wrongs]).forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn'; btn.style.fontSize='0.9rem'; btn.textContent = opt;
+        btn.onclick = () => checkAnswer(opt, btn, correctLabel);
+        grid.appendChild(btn);
+      });
+    }
+
+  } else if (quizMode === 'notenwerte') {
+    current = pickRandom(NOTENWERTE_QUIZ);
+    showNotevalueStaff(current);
+    document.getElementById('quiz-q').textContent = 'Wie heißt dieser Notenwert?';
+    document.getElementById('quiz-hint').textContent = current.beats;
+    const allNames = NOTENWERTE_QUIZ.map(n => n.name);
+    const correctName = current.name;
+    const wrongs = shuffle(allNames.filter(n => n !== correctName)).slice(0,3);
+    shuffle([correctName, ...wrongs]).forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn'; btn.style.fontSize = '0.9rem'; btn.textContent = opt;
+      btn.onclick = () => checkAnswer(opt, btn, correctName);
+      grid.appendChild(btn);
+    });
+
+  } else if (quizMode === 'klavier') {
+    const pool = klavierLevel === 'leicht' ? KLAVIER_EASY : KLAVIER_HARD;
+    current = pickRandom(pool);
+    showSymbol(current.label);
+    document.getElementById('quiz-q').textContent = 'Tippe auf die Taste: ' + current.label;
+    document.getElementById('quiz-hint').textContent = 'Alle ' + current.label + '-Tasten zählen!';
+    renderQuizPiano(grid);
+  }
+
+  questionIndex++;
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('quiz-progress').style.width = Math.min((questionIndex/15)*100,100) + '%';
+}
+
+function checkAnswer(choice, btn, correctAnswer) {
+  if (answered) return;
+  answered = true; total++;
+  document.querySelectorAll('.option-btn').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === correctAnswer) b.classList.add('correct');
+  });
+  if (choice === correctAnswer) {
+    correct++;
+    document.getElementById('feedback').textContent = '✓ Richtig! Sehr gut!';
+    document.getElementById('feedback').className = 'feedback-msg good';
+  } else {
+    btn.classList.add('wrong');
+    document.getElementById('feedback').textContent = '✗ Falsch — richtig ist: ' + correctAnswer;
+    document.getElementById('feedback').className = 'feedback-msg bad';
+  }
+  document.getElementById('correct-count').textContent = correct;
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('next-btn').disabled = false;
+}
+
+function resetQuiz() {
+  correct = 0; total = 0; questionIndex = 0;
+  lastQuestions = [];
+  document.getElementById('correct-count').textContent = 0;
+  document.getElementById('total-count').textContent = 0;
+  document.getElementById('quiz-progress').style.width = '0%';
+  nextQuestion();
+}
+
+// =================== PIANO ===================
+const PIANO_KEYS = [
+  { label:'C4', name:'C', white:true, octave:4, y:120 },
+  { label:'D4', name:'D', white:true, octave:4, y:110 },
+  { label:'E4', name:'E', white:true, octave:4, y:110 },
+  { label:'F4', name:'F', white:true, octave:4, y:100 },
+  { label:'G4', name:'G', white:true, octave:4, y:90  },
+  { label:'A4', name:'A', white:true, octave:4, y:80  },
+  { label:'H4', name:'H', white:true, octave:4, y:70  },
+  { label:'C5', name:'C', white:true, octave:5, y:60  },
+  { label:'D5', name:'D', white:true, octave:5, y:50  },
+  { label:'E5', name:'E', white:true, octave:5, y:40  },
+  { label:'F5', name:'F', white:true, octave:5, y:30  },
+  { label:'G5', name:'G', white:true, octave:5, y:20  },
+];
+
+const BLACK_KEYS_PIANO = [
+  { label:'Cis/Des', name:'Cis', octave:4, leftIdx:0,  sharpNote:'C', sharpY:120, sharpLedger:true,  flatNote:'D', flatY:115, flatLedger:false },
+  { label:'Dis/Es',  name:'Dis', octave:4, leftIdx:1,  sharpNote:'D', sharpY:115, sharpLedger:false, flatNote:'E', flatY:110, flatLedger:false },
+  { label:'Fis/Ges', name:'Fis', octave:4, leftIdx:3,  sharpNote:'F', sharpY:100, sharpLedger:false, flatNote:'G', flatY:90,  flatLedger:false },
+  { label:'Gis/As',  name:'Gis', octave:4, leftIdx:4,  sharpNote:'G', sharpY:90,  sharpLedger:false, flatNote:'A', flatY:80,  flatLedger:false },
+  { label:'Ais/B',   name:'Ais', octave:4, leftIdx:5,  sharpNote:'A', sharpY:80,  sharpLedger:false, flatNote:'H', flatY:70,  flatLedger:false },
+  { label:'Cis/Des', name:'Cis', octave:5, leftIdx:7,  sharpNote:'C', sharpY:60,  sharpLedger:false, flatNote:'D', flatY:50,  flatLedger:false },
+  { label:'Dis/Es',  name:'Dis', octave:5, leftIdx:8,  sharpNote:'D', sharpY:50,  sharpLedger:false, flatNote:'E', flatY:40,  flatLedger:false },
+  { label:'Fis/Ges', name:'Fis', octave:5, leftIdx:10, sharpNote:'F', sharpY:30,  sharpLedger:false, flatNote:'G', flatY:20,  flatLedger:false },
+  { label:'Gis/As',  name:'Gis', octave:5, leftIdx:11, sharpNote:'G', sharpY:20,  sharpLedger:false, flatNote:'A', flatY:10,  flatLedger:false },
+];
+
+function buildPiano() {
+  const pianoEl = document.getElementById('piano');
+  const nw = PIANO_KEYS.length;
+  const wPct = 100 / nw;
+  // White keys
+  PIANO_KEYS.forEach((k, i) => {
+    const key = document.createElement('div');
+    key.className = 'white-key';
+    key.style.left = (i * wPct) + '%';
+    key.style.width = wPct + '%';
+    key.style.height = '100%';
+    key.innerHTML = `<span class="key-label">${k.label}</span>`;
+    key.onclick = () => showPianoNote(k, key);
+    key.addEventListener('touchstart', (e) => { e.preventDefault(); showPianoNote(k, key); }, { passive: false });
+    pianoEl.appendChild(key);
+  });
+  // Black keys
+  const bw = wPct * 0.6;
+  BLACK_KEYS_PIANO.forEach(k => {
+    const key = document.createElement('div');
+    key.className = 'black-key-piano';
+    key.style.left = (k.leftIdx * wPct + wPct * 0.7) + '%';
+    key.style.width = bw + '%';
+    key.style.height = '60%';
+    key.innerHTML = `<span class="key-label">${k.label}</span>`;
+    key.onclick = () => showPianoNote(k, key);
+    key.addEventListener('touchstart', (e) => { e.preventDefault(); showPianoNote(k, key); }, { passive: false });
+    pianoEl.appendChild(key);
+  });
+}
+
+function renderTwoNotesOnStaff(svgId, k) {
+  const g = document.getElementById(svgId);
+  g.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+
+  function addNote(x, y, accSym, isLedger) {
+    if (isLedger) {
+      const l = document.createElementNS(ns,'line');
+      l.setAttribute('x1',x-16); l.setAttribute('x2',x+16);
+      l.setAttribute('y1',y); l.setAttribute('y2',y);
+      l.setAttribute('stroke','#d4a843'); l.setAttribute('stroke-width','1.5');
+      g.appendChild(l);
+    }
+    const acc = document.createElementNS(ns,'text');
+    acc.setAttribute('x',x-22); acc.setAttribute('y',y+6);
+    acc.setAttribute('font-size','18'); acc.setAttribute('fill','#d4a843');
+    acc.setAttribute('text-anchor','middle'); acc.setAttribute('font-family','serif');
+    acc.textContent = accSym;
+    g.appendChild(acc);
+    const el = document.createElementNS(ns,'ellipse');
+    el.setAttribute('cx',x); el.setAttribute('cy',y);
+    el.setAttribute('rx','13'); el.setAttribute('ry','9');
+    el.setAttribute('fill','#d4a843');
+    el.setAttribute('transform',`rotate(-15,${x},${y})`);
+    g.appendChild(el);
+    const stem = document.createElementNS(ns,'line');
+    stem.setAttribute('x1',x+12); stem.setAttribute('x2',x+12);
+    stem.setAttribute('y1',y); stem.setAttribute('y2',y-45);
+    stem.setAttribute('stroke','#d4a843'); stem.setAttribute('stroke-width','2');
+    g.appendChild(stem);
+  }
+
+  // Left note: sharp (lower note + #)
+  addNote(140, Math.max(k.sharpY,15), '♯', k.sharpLedger);
+
+  // Divider
+  const div = document.createElementNS(ns,'line');
+  div.setAttribute('x1','200'); div.setAttribute('x2','200');
+  div.setAttribute('y1','10'); div.setAttribute('y2','125');
+  div.setAttribute('stroke','#2e2a22'); div.setAttribute('stroke-width','1');
+  g.appendChild(div);
+
+  // Right note: flat (upper note + b)
+  addNote(260, Math.max(k.flatY,15), '♭', k.flatLedger);
+}
+
+function showPianoNote(k, keyEl) {
+  keyEl.classList.add('active');
+  setTimeout(() => keyEl.classList.remove('active'), 4000);
+
+  document.getElementById('piano-staff-wrap').style.display = 'block';
+  document.getElementById('piano-staff-label').textContent = `Note: ${k.label} — ${k.name}${k.octave}`;
+
+  if (k.sharpNote) {
+    renderTwoNotesOnStaff('piano-note', k);
+    playNote(k.name + k.octave);
+  } else {
+    renderNoteOnStaff('piano-note', { label: k.name, y: Math.max(k.y, 15) });
+    playNote(k.name + k.octave);
+  }
+}
+
+// =================== AUDIO ===================
+const NOTE_NAME_MAP = {
+  'C4':'C4','Cis4':'Db4','D4':'D4','Dis4':'Eb4','E4':'E4',
+  'F4':'F4','Fis4':'Gb4','G4':'G4','Gis4':'Ab4','A4':'A4',
+  'Ais4':'Bb4','H4':'B4','C5':'C5','Cis5':'Db5','D5':'D5',
+  'Dis5':'Eb5','E5':'E5','F5':'F5','Fis5':'Gb5','G5':'G5',
+  'Gis5':'Ab5',
+};
+let _sampler = null;
+let _samplerReady = false;
+
+function initSampler() {
+  if (_sampler) return;
+  if (typeof Tone === 'undefined') return;
+  _sampler = new Tone.Sampler({
+    urls: {
+      C4: 'C4.mp3', 'D#4': 'Ds4.mp3', 'F#4': 'Fs4.mp3',
+      A4: 'A4.mp3', C5: 'C5.mp3', 'D#5': 'Ds5.mp3',
+      'F#5': 'Fs5.mp3', A5: 'A5.mp3',
+      C3: 'C3.mp3', 'D#3': 'Ds3.mp3', 'F#3': 'Fs3.mp3', A3: 'A3.mp3',
+    },
+    release: 1,
+    baseUrl: 'https://tonejs.github.io/audio/salamander/',
+    onload: () => {
+      _samplerReady = true;
+      console.log('Sampler ready!');
+    },
+    onerror: (e) => console.error('Sampler error:', e),
+  }).toDestination();
+}
+
+function playNote(noteKey) {
+  const note = NOTE_NAME_MAP[noteKey];
+  if (!note) return;
+  if (typeof Tone === 'undefined') return;
+  Tone.start();
+  initSampler();
+  if (!_samplerReady) return;
+  _sampler.triggerAttackRelease(note, 4);
+}
+
+// Init
+buildPiano();
+nextQuestion();
+</script>
+</body>
+</html>
